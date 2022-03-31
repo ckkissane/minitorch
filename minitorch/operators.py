@@ -286,9 +286,10 @@ def reduce(fn, start):
     """
 
     def reduce_fn(ls):
-        if len(ls) == 0:
-            return start
-        return fn(ls[0], reduce_fn(ls[1:]))
+        val = start
+        for x in ls:
+            val = fn(x, val)
+        return val
 
     return reduce_fn
 
