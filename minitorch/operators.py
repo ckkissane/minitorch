@@ -219,14 +219,20 @@ def map(fn):
         function : A function that takes a list, applies `fn` to each element, and returns a
         new list
     """
-    # TODO: Implement for Task 0.3.
-    raise NotImplementedError("Need to implement for Task 0.3")
+    return lambda ls: [fn(elt) for elt in ls]
 
 
 def negList(ls):
-    "Use :func:`map` and :func:`neg` to negate each element in `ls`"
-    # TODO: Implement for Task 0.3.
-    raise NotImplementedError("Need to implement for Task 0.3")
+    """
+    Use :func:`map` and :func:`neg` to negate each element in `ls`
+
+    Args:
+        ls (list): list of numbers
+
+    Returns:
+        list : a list with each element in ls negated
+    """
+    return map(neg)(ls)
 
 
 def zipWith(fn):
@@ -245,14 +251,21 @@ def zipWith(fn):
         applying fn(x, y) on each pair of elements.
 
     """
-    # TODO: Implement for Task 0.3.
-    raise NotImplementedError("Need to implement for Task 0.3")
+    return lambda ls1, ls2: [fn(x, y) for x, y in zip(ls1, ls2)]
 
 
 def addLists(ls1, ls2):
-    "Add the elements of `ls1` and `ls2` using :func:`zipWith` and :func:`add`"
-    # TODO: Implement for Task 0.3.
-    raise NotImplementedError("Need to implement for Task 0.3")
+    """
+    Add the elements of `ls1` and `ls2` using :func:`zipWith` and :func:`add`
+
+    Args:
+        ls1 (list): input list
+        ls2 (list): input list
+
+    Returns:
+        list : each element is the sum of the corresponding elements in ls1 and ls2
+    """
+    return zipWith(add)(ls1, ls2)
 
 
 def reduce(fn, start):
@@ -271,17 +284,36 @@ def reduce(fn, start):
         :math:`x_1 \ldots x_n` and computes the reduction :math:`fn(x_3, fn(x_2,
         fn(x_1, x_0)))`
     """
-    # TODO: Implement for Task 0.3.
-    raise NotImplementedError("Need to implement for Task 0.3")
+
+    def reduce_fn(ls):
+        if len(ls) == 0:
+            return start
+        return fn(ls[0], reduce_fn(ls[1:]))
+
+    return reduce_fn
 
 
 def sum(ls):
-    "Sum up a list using :func:`reduce` and :func:`add`."
-    # TODO: Implement for Task 0.3.
-    raise NotImplementedError("Need to implement for Task 0.3")
+    """
+    Sum up a list using :func:`reduce` and :func:`add`.
+
+    Args:
+        ls (list): input list of floats
+
+    Returns:
+        float : sum of elements in ls
+    """
+    return reduce(add, 0)(ls)
 
 
 def prod(ls):
-    "Product of a list using :func:`reduce` and :func:`mul`."
-    # TODO: Implement for Task 0.3.
-    raise NotImplementedError("Need to implement for Task 0.3")
+    """
+    Product of a list using :func:`reduce` and :func:`mul`.
+
+    Args:
+        ls (list): input list of floats
+
+    Returns:
+        float : product of all elements in ls
+    """
+    return reduce(mul, 1)(ls)
