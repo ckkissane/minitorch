@@ -37,3 +37,7 @@ Topics covered:
 * Advanced NN Functions
 
 
+Hand created classifier from Module-0 Task 0.5:
+
+<img width="487" alt="image" src="https://user-images.githubusercontent.com/67170576/161069418-2ce0476b-266f-41f2-af2a-0cb8f43d79c2.png">
+
