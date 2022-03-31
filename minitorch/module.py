@@ -71,7 +71,7 @@ class Module:
         Returns:
             list of Parameters: all parameters of this module and its descendents.
         """
-        params = [p for p in self.__dict__["_parameters"].values()]
+        params = list(self.__dict__["_parameters"].values())
         for module in self.modules():
             params.extend(module.parameters())
         return params
