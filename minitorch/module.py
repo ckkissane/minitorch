@@ -39,30 +39,14 @@ class Module:
         Returns:
             list of pairs: Contains the name and :class:`Parameter` of each ancestor parameter.
         """
-
-        def named_parameters_helper(cur, name_path):
-            """
-            Helper to recursively traverse modules while recording name_path to each Parameter
-
-            Args:
-                cur (Module): current module being processed
-                name_path (list[str]): list of ancestor modules
-
-            Returns:
-                list of pairs: Contains the name and :class:`Parameter` of each ancestor parameter.
-            """
-            prefix = "" if name_path == [] else ".".join(name_path) + "."
-            np = [
-                (prefix + name, param)
-                for name, param in cur.__dict__["_parameters"].items()
+        np = list(self._parameters.items())
+        for module_name, module in self._modules.items():
+            np_module = [
+                (module_name + "." + param_name, param)
+                for param_name, param in module.named_parameters()
             ]
-            for key, module in cur.__dict__["_modules"].items():
-                name_path.append(key)
-                np.extend(named_parameters_helper(module, name_path))
-                name_path.pop()
-            return np
-
-        return named_parameters_helper(self, [])
+            np.extend(np_module)
+        return np
 
     def parameters(self):
         """
@@ -71,7 +55,7 @@ class Module:
         Returns:
             list of Parameters: all parameters of this module and its descendents.
         """
-        params = list(self.__dict__["_parameters"].values())
+        params = list(self._parameters.values())
         for module in self.modules():
             params.extend(module.parameters())
         return params
