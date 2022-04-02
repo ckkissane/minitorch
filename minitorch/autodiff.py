@@ -190,8 +190,7 @@ class History:
         Returns:
             list of numbers : a derivative with respect to `inputs`
         """
-        # TODO: Implement for Task 1.4.
-        raise NotImplementedError('Need to implement for Task 1.4')
+        return self.last_fn.chain_rule(self.ctx, self.inputs, d_output)
 
 
 class FunctionBase:
@@ -273,8 +272,12 @@ class FunctionBase:
         """
         # Tip: Note when implementing this function that
         # cls.backward may return either a value or a tuple.
-        # TODO: Implement for Task 1.3.
-        raise NotImplementedError('Need to implement for Task 1.3')
+        back_results = wrap_tuple(cls.backward(ctx, d_output))
+        return [
+            (var, deriv)
+            for var, deriv in zip(inputs, back_results)
+            if not is_constant(var)
+        ]
 
 
 # Algorithms for backpropagation
@@ -295,8 +298,20 @@ def topological_sort(variable):
         list of Variables : Non-constant Variables in topological order
                             starting from the right.
     """
-    # TODO: Implement for Task 1.4.
-    raise NotImplementedError('Need to implement for Task 1.4')
+    visited = set()
+    stack = []
+
+    def dfs(var):
+        if is_constant(var) or var.unique_id in visited:
+            return
+        visited.add(var.unique_id)
+        if var.history.inputs:
+            for child in var.history.inputs:
+                dfs(child)
+        stack.append(var)
+
+    dfs(variable)
+    return stack
 
 
 def backpropagate(variable, deriv):
@@ -312,5 +327,15 @@ def backpropagate(variable, deriv):
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    # TODO: Implement for Task 1.4.
-    raise NotImplementedError('Need to implement for Task 1.4')
+    var_stack = topological_sort(variable)
+    var_to_deriv = {}
+    for v in var_stack:
+        var_to_deriv[v.unique_id] = deriv if v.unique_id == variable.unique_id else 0
+    for var in reversed(var_stack):
+        cur_deriv = var_to_deriv[var.unique_id]
+        if var.is_leaf():
+            var.accumulate_derivative(cur_deriv)
+        else:
+            back = var.history.backprop_step(cur_deriv)
+            for v, d in back:
+                var_to_deriv[v.unique_id] += d
