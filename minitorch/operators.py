@@ -61,7 +61,7 @@ def neg(x):
     Returns:
         float: -x
     """
-    return -x
+    return float(-x)
 
 
 def lt(x, y):
@@ -75,7 +75,7 @@ def lt(x, y):
     Returns:
         float: 1.0 if x is less than y else 0.0
     """
-    return 1.0 if x < y else 0.0
+    return float(x < y)
 
 
 def eq(x, y):
@@ -89,7 +89,7 @@ def eq(x, y):
     Returns:
         float: 1.0 if x is equal to y else 0.0
     """
-    return 1.0 if x == y else 0.0
+    return float(x == y)
 
 
 def max(x, y):
@@ -154,7 +154,7 @@ def relu(x):
     Returns:
         float : relu value
     """
-    return x if x > 0 else 0
+    return float(x) if x > 0 else 0.0
 
 
 EPS = 1e-6
