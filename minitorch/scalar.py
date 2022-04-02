@@ -208,7 +208,7 @@ class Neg(ScalarFunction):
 
     @staticmethod
     def forward(ctx, a):
-        return float(operators.neg(a))
+        return operators.neg(a)
 
     @staticmethod
     def backward(ctx, d_output):
@@ -235,7 +235,7 @@ class ReLU(ScalarFunction):
     @staticmethod
     def forward(ctx, a):
         ctx.save_for_backward(a)
-        return float(operators.relu(a))
+        return operators.relu(a)
 
     @staticmethod
     def backward(ctx, d_output):
