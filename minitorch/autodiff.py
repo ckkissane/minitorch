@@ -327,17 +327,15 @@ def backpropagate(variable, deriv):
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    stack = topological_sort(variable)
-    var_to_deriv = {variable.unique_id: deriv}
-    for var in stack:
-        if var.unique_id != variable.unique_id:
-            var_to_deriv[var.unique_id] = 0
-    while stack:
-        cur_var = stack.pop()
-        cur_deriv = var_to_deriv[cur_var.unique_id]
-        if cur_var.is_leaf():
-            cur_var.accumulate_derivative(cur_deriv)
+    var_stack = topological_sort(variable)
+    var_to_deriv = {}
+    for v in var_stack:
+        var_to_deriv[v.unique_id] = deriv if v.unique_id == variable.unique_id else 0
+    for var in reversed(var_stack):
+        cur_deriv = var_to_deriv[var.unique_id]
+        if var.is_leaf():
+            var.accumulate_derivative(cur_deriv)
         else:
-            back = cur_var.history.backprop_step(cur_deriv)
+            back = var.history.backprop_step(cur_deriv)
             for v, d in back:
                 var_to_deriv[v.unique_id] += d
