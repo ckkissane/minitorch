@@ -39,8 +39,19 @@ def tensor_map(fn):
     """
 
     def _map(out, out_shape, out_strides, in_storage, in_shape, in_strides):
-        # TODO: Implement for Task 2.2.
-        raise NotImplementedError('Need to implement for Task 2.2')
+        out_idx = np.array(out_shape)
+        in_idx = np.array(in_shape)
+        # walk over output storage
+        for i in range(len(out)):
+            # get index of current out position
+            to_index(i, out_shape, out_idx)
+            # map to index in input tensor
+            broadcast_index(out_idx, out_shape, in_shape, in_idx)
+            # get input position in storage based on index
+            in_pos = index_to_position(in_idx, in_strides)
+            out_pos = index_to_position(out_idx, out_strides)
+            # apply fn on input storage value at position and write to output storage
+            out[out_pos] = fn(in_storage[in_pos])
 
     return _map
 
@@ -130,8 +141,22 @@ def tensor_zip(fn):
         b_shape,
         b_strides,
     ):
-        # TODO: Implement for Task 2.2.
-        raise NotImplementedError('Need to implement for Task 2.2')
+        out_idx = np.array(out_shape)
+        a_idx = np.array(a_shape)
+        b_idx = np.array(b_shape)
+        # walk over output storage
+        for i in range(len(out)):
+            # get index of current out position
+            to_index(i, out_shape, out_idx)
+            # map to index in input tensor
+            broadcast_index(out_idx, out_shape, a_shape, a_idx)
+            broadcast_index(out_idx, out_shape, b_shape, b_idx)
+            # get input position in storage based on index
+            a_pos = index_to_position(a_idx, a_strides)
+            b_pos = index_to_position(b_idx, b_strides)
+            out_pos = index_to_position(out_idx, out_strides)
+            # apply fn on input storage value at position and write to output storage
+            out[out_pos] = fn(a_storage[a_pos], b_storage[b_pos])
 
     return _zip
 
@@ -201,8 +226,18 @@ def tensor_reduce(fn):
     """
 
     def _reduce(out, out_shape, out_strides, a_storage, a_shape, a_strides, reduce_dim):
-        # TODO: Implement for Task 2.2.
-        raise NotImplementedError('Need to implement for Task 2.2')
+        out_idx = np.array(out_shape)
+        # walk over output storage
+        for i in range(len(out)):
+            # get index of current out position
+            to_index(i, out_shape, out_idx)
+            out_pos = index_to_position(out_idx, out_strides)
+            for j in range(a_shape[reduce_dim]):
+                out_idx[reduce_dim] = j
+                # get input position in storage based on index
+                a_pos = index_to_position(out_idx, a_strides)
+                # apply fn on input storage value at position and write to output storage
+                out[out_pos] = fn(out[out_pos], a_storage[a_pos])
 
     return _reduce
 
