@@ -15,15 +15,16 @@ def index_to_position(index, strides):
     """
     Converts a multidimensional tensor `index` into a single-dimensional position in
     storage based on strides.
-
     Args:
         index (array-like): index tuple of ints
         strides (array-like): tensor strides
-
     Returns:
         int : position in storage
     """
-    return sum(i * s for i, s in zip(index, strides))
+    assert len(index) == len(
+        strides
+    ), "Given index and strides need to be of equal length."
+    return sum([idx * stride for (idx, stride) in zip(index, strides)])
 
 
 def to_index(ordinal, shape, out_index):
@@ -32,74 +33,63 @@ def to_index(ordinal, shape, out_index):
     Should ensure that enumerating position 0 ... size of a
     tensor produces every index exactly once. It
     may not be the inverse of `index_to_position`.
-
     Args:
         ordinal (int): ordinal position to convert.
         shape (tuple): tensor shape.
         out_index (array): the index corresponding to position.
-
     Returns:
-      None : Fills in `out_index`.
-
+        None : Fills in `out_index`.
     """
-    product = prod(shape)
-    for i, n in enumerate(shape):
-        product //= n
-        out_index[i] = ordinal // product
-        ordinal %= product
+    for i, s in enumerate(reversed(shape)):
+        out_index[len(shape) - 1 - i] = ordinal % s
+        ordinal = ordinal // s
 
 
 def broadcast_index(big_index, big_shape, shape, out_index):
     """
-    Convert a `big_index` into `big_shape` to a smaller `out_index`
-    into `shape` following broadcasting rules. In this case
+    Convert a `big_index` in `big_shape` to a smaller `out_index`
+    in `shape` following broadcasting rules. In this case
     it may be larger or with more dimensions than the `shape`
     given. Additional dimensions may need to be mapped to 0 or
     removed.
-
     Args:
         big_index (array-like): multidimensional index of bigger tensor
         big_shape (array-like): tensor shape of bigger tensor
         shape (array-like): tensor shape of smaller tensor
         out_index (array-like): multidimensional index of smaller tensor
-
     Returns:
         None : Fills in `out_index`.
     """
-    offset = len(big_shape) - len(shape)
-    for i in range(len(shape)):
-        out_index[i] = 0 if shape[i] == 1 else big_index[i + offset]
+    for s_i in range(1, len(big_shape) + 1):
+        if s_i > len(shape):
+            continue
+        if big_shape[-s_i] == shape[-s_i]:
+            out_index[-s_i] = big_index[-s_i]
+        if shape[-s_i] == 1:
+            out_index[-s_i] = 0
 
 
 def shape_broadcast(shape1, shape2):
     """
     Broadcast two shapes to create a new union shape.
-
     Args:
         shape1 (tuple) : first shape
         shape2 (tuple) : second shape
-
     Returns:
         tuple : broadcasted shape
-
     Raises:
         IndexingError : if cannot broadcast
     """
-    if len(shape1) > len(shape2):
-        s1 = list(shape1)
-        s2 = [1] * (len(shape1) - len(shape2)) + list(shape2)
-    else:
-        s1 = list(shape2)
-        s2 = [1] * (len(shape2) - len(shape1)) + list(shape1)
-    res = []
-    for x, y in zip(s1, s2):
-        if x == y or y == 1:
-            res.append(x)
-        elif x == 1:
-            res.append(y)
-        else:
-            raise IndexingError
-    return tuple(res)
+    out_shape = []
+    for s_i in range(1, max(len(shape1), len(shape2)) + 1):
+        s1 = shape1[-s_i] if s_i <= len(shape1) else 0
+        s2 = shape2[-s_i] if s_i <= len(shape2) else 0
+        if (s1 != s2) and (s1 > 1 and s2 > 1):
+            raise IndexingError(
+                f"Cannot broadcast, because in trailing dimension number {s_i}: {s1} != {s2}"
+            )
+        out_shape.append(max(s1, s2))
+    return tuple(reversed(out_shape))
 
 
 def strides_from_shape(shape):
@@ -140,7 +130,6 @@ class TensorData:
     def is_contiguous(self):
         """
         Check that the layout is contiguous, i.e. outer dimensions have bigger strides than inner dimensions.
-
         Returns:
             bool : True if contiguous
         """
@@ -195,20 +184,18 @@ class TensorData:
     def permute(self, *order):
         """
         Permute the dimensions of the tensor.
-
         Args:
             order (list): a permutation of the dimensions
-
         Returns:
             :class:`TensorData`: a new TensorData with the same storage and a new dimension order.
         """
         assert list(sorted(order)) == list(
             range(len(self.shape))
         ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
-
-        new_shape = tuple(self.shape[i] for i in order)
-        new_strides = tuple(self.strides[i] for i in order)
-        return TensorData(self._storage, new_shape, new_strides)
+        arr_order = array(order)
+        shape = tuple(self._shape[arr_order])
+        strides = tuple(self._strides[arr_order])
+        return TensorData(self._storage, shape, strides)
 
     def to_string(self):
         s = ""

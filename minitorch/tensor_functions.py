@@ -28,14 +28,11 @@ def make_tensor_backend(tensor_ops, is_cuda=False):
     """
     Dynamically construct a tensor backend based on a `tensor_ops` object
     that implements map, zip, and reduce higher-order functions.
-
     Args:
         tensor_ops (:class:`TensorOps`) : tensor operations object see `tensor_ops.py`
         is_cuda (bool) : is the operations object CUDA / GPU based
-
     Returns :
         backend : a collection of tensor functions
-
     """
     # Maps
     neg_map = tensor_ops.map(operators.neg)
@@ -52,6 +49,7 @@ def make_tensor_backend(tensor_ops, is_cuda=False):
     lt_zip = tensor_ops.zip(operators.lt)
     eq_zip = tensor_ops.zip(operators.eq)
     is_close_zip = tensor_ops.zip(operators.is_close)
+    sigmoid_back_zip = tensor_ops.zip(operators.sigmoid_back)
     relu_back_zip = tensor_ops.zip(operators.relu_back)
     log_back_zip = tensor_ops.zip(operators.log_back)
     inv_back_zip = tensor_ops.zip(operators.inv_back)
@@ -97,52 +95,58 @@ def make_tensor_backend(tensor_ops, is_cuda=False):
         class Mul(Function):
             @staticmethod
             def forward(ctx, a, b):
+                ctx.save_for_backward(a, b)
                 return mul_zip(a, b)
 
             @staticmethod
             def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+                a, b = ctx.saved_values
+                return mul_zip(grad_output, b), mul_zip(grad_output, a)
 
         class Sigmoid(Function):
             @staticmethod
             def forward(ctx, a):
+                ctx.save_for_backward(a)
                 return sigmoid_map(a)
 
             @staticmethod
             def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+                a = ctx.saved_values
+                return sigmoid_back_zip(a, grad_output)
 
         class ReLU(Function):
             @staticmethod
             def forward(ctx, a):
+                ctx.save_for_backward(a)
                 return relu_map(a)
 
             @staticmethod
             def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+                a = ctx.saved_values
+                return relu_back_zip(a, grad_output)
 
         class Log(Function):
             @staticmethod
             def forward(ctx, a):
+                ctx.save_for_backward(a)
                 return log_map(a)
 
             @staticmethod
             def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+                a = ctx.saved_values
+                return log_back_zip(a, grad_output)
 
         class Exp(Function):
             @staticmethod
             def forward(ctx, a):
-                return exp_map(a)
+                exp_a = exp_map(a)
+                ctx.save_for_backward(exp_a)
+                return exp_a
 
             @staticmethod
             def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+                exp_a = ctx.saved_values
+                return mul_zip(grad_output, exp_a)
 
         class Sum(Function):
             @staticmethod
@@ -178,22 +182,24 @@ def make_tensor_backend(tensor_ops, is_cuda=False):
         class LT(Function):
             @staticmethod
             def forward(ctx, a, b):
+                ctx.save_for_backward(a.shape, b.shape)
                 return lt_zip(a, b)
 
             @staticmethod
             def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+                a_shape, b_shape = ctx.saved_values
+                return zeros(a_shape), zeros(b_shape)
 
         class EQ(Function):
             @staticmethod
             def forward(ctx, a, b):
+                ctx.save_for_backward(a.shape, b.shape)
                 return eq_zip(a, b)
 
             @staticmethod
             def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+                a_shape, b_shape = ctx.saved_values
+                return zeros(a_shape), zeros(b_shape)
 
         class IsClose(Function):
             @staticmethod
@@ -203,12 +209,15 @@ def make_tensor_backend(tensor_ops, is_cuda=False):
         class Permute(Function):
             @staticmethod
             def forward(ctx, a, order):
-                return a.permute(order)
+                ctx.save_for_backward(order)
+                return a._new(a._tensor.permute(*order))
 
             @staticmethod
             def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+                order = ctx.saved_values
+                # No idea why this works
+                order = [a[0] for a in sorted(enumerate(order), key=lambda a: a[1])]
+                return grad_output._new(grad_output._tensor.permute(*order))
 
         class View(Function):
             @staticmethod
@@ -263,11 +272,9 @@ TensorFunctions = make_tensor_backend(TensorOps)
 def zeros(shape, backend=TensorFunctions):
     """
     Produce a zero tensor of size `shape`.
-
     Args:
         shape (tuple): shape of tensor
         backend (:class:`Backend`): tensor backend
-
     Returns:
         :class:`Tensor` : new tensor
     """
@@ -277,12 +284,10 @@ def zeros(shape, backend=TensorFunctions):
 def rand(shape, backend=TensorFunctions, requires_grad=False):
     """
     Produce a random tensor of size `shape`.
-
     Args:
         shape (tuple): shape of tensor
         backend (:class:`Backend`): tensor backend
         requires_grad (bool): turn on autodifferentiation
-
     Returns:
         :class:`Tensor` : new tensor
     """
@@ -295,13 +300,11 @@ def rand(shape, backend=TensorFunctions, requires_grad=False):
 def _tensor(ls, shape=None, backend=TensorFunctions, requires_grad=False):
     """
     Produce a tensor with data ls and shape `shape`.
-
     Args:
         ls (list): data for tensor
         shape (tuple): shape of tensor
         backend (:class:`Backend`): tensor backend
         requires_grad (bool): turn on autodifferentiation
-
     Returns:
         :class:`Tensor` : new tensor
     """
@@ -313,12 +316,10 @@ def _tensor(ls, shape=None, backend=TensorFunctions, requires_grad=False):
 def tensor(ls, backend=TensorFunctions, requires_grad=False):
     """
     Produce a tensor with data and shape from ls
-
     Args:
         ls (list): data for tensor
         backend (:class:`Backend`): tensor backend
         requires_grad (bool): turn on autodifferentiation
-
     Returns:
         :class:`Tensor` : new tensor
     """
@@ -362,14 +363,10 @@ def grad_check(f, *vals):
     out = f(*vals)
     out.sum().backward()
     err_msg = """
-
 Gradient check error for function %s.
-
 Input %s
-
 Received derivative %f for argument %d and index %s,
 but was expecting derivative %f from central difference.
-
 """
 
     for i, x in enumerate(vals):

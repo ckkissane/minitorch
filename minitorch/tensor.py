@@ -1,6 +1,7 @@
 """
 Implementation of the core Tensor object for autodifferentiation.
 """
+import numpy as np
 
 from .autodiff import Variable
 from .tensor_data import TensorData
@@ -14,9 +15,7 @@ class Tensor(Variable):
     """
     Tensor is a generalization of Scalar in that it is a Variable that
     handles multidimensional arrays.
-
     Attributes:
-
         _tensor (:class:`TensorData`) : the tensor data storage
         backend : backend object used to implement tensor math (see `tensor_functions.py`)
     """
@@ -62,7 +61,7 @@ class Tensor(Variable):
 
     def _ensure_tensor(self, b):
         "Turns a python number into a tensor with the same backend."
-        if isinstance(b, (int, float)):
+        if isinstance(b, (int, float, np.int64, np.float64)):
             b = Tensor.make([b], (1,), backend=self.backend)
         else:
             b._type_(self.backend)
@@ -181,14 +180,10 @@ class Tensor(Variable):
         Method used to allow for backprop over broadcasting.
         This method is called when the output of `backward`
         is a different size than the input of `forward`.
-
-
         Parameters:
             other (class:`Tensor`): backward tensor (must broadcast with self)
-
         Returns:
             Expanded version of `other` with the right derivatives
-
         """
 
         # Case 1: Both the same shape.

@@ -12,19 +12,14 @@ def tensor_map(fn):
     """
     Low-level implementation of tensor map between
     tensors with *possibly different strides*.
-
     Simple version:
-
     * Fill in the `out` array by applying `fn` to each
       value of `in_storage` assuming `out_shape` and `in_shape`
       are the same size.
-
     Broadcasted version:
-
     * Fill in the `out` array by applying `fn` to each
       value of `in_storage` assuming `out_shape` and `in_shape`
       broadcast. (`in_shape` must be smaller than `out_shape`).
-
     Args:
         fn: function from float-to-float to apply
         out (array): storage for out tensor
@@ -33,7 +28,6 @@ def tensor_map(fn):
         in_storage (array): storage for in tensor
         in_shape (array): shape for in tensor
         in_strides (array): strides for in tensor
-
     Returns:
         None : Fills in `out`
     """
@@ -59,29 +53,22 @@ def tensor_map(fn):
 def map(fn):
     """
     Higher-order tensor map function ::
-
       fn_map = map(fn)
       fn_map(a, out)
       out
-
     Simple version::
-
         for i:
             for j:
                 out[i, j] = fn(a[i, j])
-
     Broadcasted version (`a` might be smaller than `out`) ::
-
         for i:
             for j:
                 out[i, j] = fn(a[i, 0])
-
     Args:
         fn: function from float-to-float to apply.
         a (:class:`TensorData`): tensor to map over
         out (:class:`TensorData`): optional, tensor data to fill in,
                should broadcast with `a`
-
     Returns:
         :class:`TensorData` : new tensor data
     """
@@ -101,19 +88,14 @@ def tensor_zip(fn):
     """
     Low-level implementation of tensor zip between
     tensors with *possibly different strides*.
-
     Simple version:
-
     * Fill in the `out` array by applying `fn` to each
       value of `a_storage` and `b_storage` assuming `out_shape`
       and `a_shape` are the same size.
-
     Broadcasted version:
-
     * Fill in the `out` array by applying `fn` to each
       value of `a_storage` and `b_storage` assuming `a_shape`
       and `b_shape` broadcast to `out_shape`.
-
     Args:
         fn: function mapping two floats to float to apply
         out (array): storage for `out` tensor
@@ -125,7 +107,6 @@ def tensor_zip(fn):
         b_storage (array): storage for `b` tensor
         b_shape (array): shape for `b` tensor
         b_strides (array): strides for `b` tensor
-
     Returns:
         None : Fills in `out`
     """
@@ -164,28 +145,20 @@ def tensor_zip(fn):
 def zip(fn):
     """
     Higher-order tensor zip function ::
-
       fn_zip = zip(fn)
       out = fn_zip(a, b)
-
     Simple version ::
-
         for i:
             for j:
                 out[i, j] = fn(a[i, j], b[i, j])
-
     Broadcasted version (`a` and `b` might be smaller than `out`) ::
-
         for i:
             for j:
                 out[i, j] = fn(a[i, 0], b[0, j])
-
-
     Args:
         fn: function from two floats-to-float to apply
         a (:class:`TensorData`): tensor to zip over
         b (:class:`TensorData`): tensor to zip over
-
     Returns:
         :class:`TensorData` : new tensor data
     """
@@ -207,10 +180,8 @@ def zip(fn):
 def tensor_reduce(fn):
     """
     Low-level implementation of tensor reduce.
-
     * `out_shape` will be the same as `a_shape`
        except with `reduce_dim` turned to size `1`
-
     Args:
         fn: reduction function mapping two floats to float
         out (array): storage for `out` tensor
@@ -220,7 +191,6 @@ def tensor_reduce(fn):
         a_shape (array): shape for `a` tensor
         a_strides (array): strides for `a` tensor
         reduce_dim (int): dimension to reduce out
-
     Returns:
         None : Fills in `out`
     """
@@ -245,26 +215,21 @@ def tensor_reduce(fn):
 def reduce(fn, start=0.0):
     """
     Higher-order tensor reduce function. ::
-
       fn_reduce = reduce(fn)
       out = fn_reduce(a, dim)
-
     Simple version ::
-
         for j:
             out[1, j] = start
             for i:
                 out[1, j] = fn(out[1, j], a[i, j])
-
-
     Args:
         fn: function from two floats-to-float to apply
         a (:class:`TensorData`): tensor to reduce over
         dim (int): int of dim to reduce
-
     Returns:
         :class:`TensorData` : new tensor
     """
+
     f = tensor_reduce(fn)
 
     def ret(a, dim):
