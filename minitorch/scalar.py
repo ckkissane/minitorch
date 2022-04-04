@@ -10,21 +10,20 @@ import numpy as np
 def central_difference(f, *vals, arg=0, epsilon=1e-6):
     r"""
     Computes an approximation to the derivative of `f` with respect to one arg.
-
     See :doc:`derivative` or https://en.wikipedia.org/wiki/Finite_difference for more details.
-
     Args:
         f : arbitrary function from n-scalar args to one value
         *vals (list of floats): n-float values :math:`x_0 \ldots x_{n-1}`
         arg (int): the number :math:`i` of the arg to compute the derivative
         epsilon (float): a small constant
-
     Returns:
         float : An approximation of :math:`f'_i(x_0, \ldots, x_{n-1})`
     """
-    right_args = [v + epsilon if i == arg else v for i, v in enumerate(vals)]
-    left_args = [v - epsilon if i == arg else v for i, v in enumerate(vals)]
-    return (f(*right_args) - f(*left_args)) / (2 * epsilon)
+    l = list(vals)
+    r = list(vals)
+    l[arg] -= epsilon
+    r[arg] += epsilon
+    return (f(*r) - f(*l)) / (2 * epsilon)
 
 
 # ## Task 1.2 and 1.4
@@ -38,7 +37,6 @@ class Scalar(Variable):
     Python numbers while also tracking the operations that led to the
     number's creation. They can only be manipulated by
     :class:`ScalarFunction`.
-
     Attributes:
         data (float): The wrapped scalar value.
     """
@@ -101,7 +99,6 @@ class ScalarFunction(FunctionBase):
     """
     A wrapper for a mathematical function that processes and produces
     Scalar variables.
-
     This is a static class and is never instantiated. We use `class`
     here to group together the `forward` and `backward` code.
     """
@@ -110,13 +107,11 @@ class ScalarFunction(FunctionBase):
     def forward(ctx, *inputs):
         r"""
         Forward call, compute :math:`f(x_0 \ldots x_{n-1})`.
-
         Args:
             ctx (:class:`Context`): A container object to save
                                     any information that may be needed
                                     for the call to backward.
             *inputs (list of floats): n-float values :math:`x_0 \ldots x_{n-1}`.
-
         Should return float the computation of the function :math:`f`.
         """
         pass  # pragma: no cover
@@ -125,14 +120,11 @@ class ScalarFunction(FunctionBase):
     def backward(ctx, d_out):
         r"""
         Backward call, computes :math:`f'_{x_i}(x_0 \ldots x_{n-1}) \times d_{out}`.
-
         Args:
             ctx (Context): A container object holding any information saved during in the corresponding `forward` call.
             d_out (float): :math:`d_out` term in the chain rule.
-
         Should return the computation of the derivative function
         :math:`f'_{x_i}` for each input :math:`x_i` times `d_out`.
-
         """
         pass  # pragma: no cover
 
@@ -151,7 +143,7 @@ class Add(ScalarFunction):
 
     @staticmethod
     def forward(ctx, a, b):
-        return a + b
+        return operators.add(a, b)
 
     @staticmethod
     def backward(ctx, d_output):
@@ -176,7 +168,7 @@ class Log(ScalarFunction):
 
 
 class Mul(ScalarFunction):
-    "Multiplication function :math:`f(x, y) = x * y`"
+    "Multiplication function"
 
     @staticmethod
     def forward(ctx, a, b):
@@ -190,7 +182,7 @@ class Mul(ScalarFunction):
 
 
 class Inv(ScalarFunction):
-    "Inverse function :math:`f(x, y) = x * y`"
+    "Inverse function"
 
     @staticmethod
     def forward(ctx, a):
@@ -204,7 +196,7 @@ class Inv(ScalarFunction):
 
 
 class Neg(ScalarFunction):
-    "Negation function :math:`f(x) = -x`"
+    "Negation function"
 
     @staticmethod
     def forward(ctx, a):
@@ -212,7 +204,7 @@ class Neg(ScalarFunction):
 
     @staticmethod
     def backward(ctx, d_output):
-        return -d_output
+        return operators.neg(d_output)
 
 
 class Sigmoid(ScalarFunction):
@@ -226,7 +218,7 @@ class Sigmoid(ScalarFunction):
     @staticmethod
     def backward(ctx, d_output):
         a = ctx.saved_values
-        return d_output * operators.sigmoid(a) * (1 - operators.sigmoid(a))
+        return operators.sigmoid_back(a, d_output)
 
 
 class ReLU(ScalarFunction):
@@ -248,13 +240,14 @@ class Exp(ScalarFunction):
 
     @staticmethod
     def forward(ctx, a):
-        ctx.save_for_backward(a)
-        return operators.exp(a)
+        exp_a = operators.exp(a)
+        ctx.save_for_backward(exp_a)
+        return exp_a
 
     @staticmethod
     def backward(ctx, d_output):
-        a = ctx.saved_values
-        return d_output * operators.exp(a)
+        exp_a = ctx.saved_values
+        return operators.mul(d_output, exp_a)
 
 
 class LT(ScalarFunction):
@@ -266,7 +259,7 @@ class LT(ScalarFunction):
 
     @staticmethod
     def backward(ctx, d_output):
-        return 0.0
+        return 0.0, 0.0
 
 
 class EQ(ScalarFunction):
@@ -278,14 +271,13 @@ class EQ(ScalarFunction):
 
     @staticmethod
     def backward(ctx, d_output):
-        return 0.0
+        return 0.0, 0.0
 
 
 def derivative_check(f, *scalars):
     """
     Checks that autodiff works on a python function.
     Asserts False if derivative is incorrect.
-
     Parameters:
         f (function) : function from n-scalars to 1-scalar.
         *scalars (list of :class:`Scalar`) : n input scalar values.

@@ -37,10 +37,8 @@ class Variable:
     def requires_grad_(self, val):
         """
         Set the requires_grad flag to `val` on variable.
-
         Ensures that operations on this variable will trigger
         backpropagation.
-
         Args:
             val (bool): whether to require grad
         """
@@ -49,14 +47,13 @@ class Variable:
     def backward(self, d_output=None):
         """
         Calls autodiff to fill in the derivatives for the history of this object.
-
         Args:
             d_output (number, opt): starting derivative to backpropagate through the model
                                    (typically left out, and assumed to be 1.0).
         """
         if d_output is None:
             d_output = 1.0
-        backpropagate(self, d_output)
+        backpropagate(self, self.expand(d_output))
 
     @property
     def derivative(self):
@@ -68,9 +65,8 @@ class Variable:
 
     def accumulate_derivative(self, val):
         """
-        Add `val` to the the derivative accumulated on this variable.
+        Add `val` to the derivative accumulated on this variable.
         Should only be called during autodifferentiation on leaf variables.
-
         Args:
             val (number): value to be accumulated
         """
@@ -130,7 +126,6 @@ def unwrap_tuple(x):
 class Context:
     """
     Context class is used by `Function` to store information during the forward pass.
-
     Attributes:
         no_grad (bool) : do not save gradient information
         saved_values (tuple) : tuple of values saved for backward pass
@@ -144,7 +139,6 @@ class Context:
     def save_for_backward(self, *values):
         """
         Store the given `values` if they need to be used during backpropagation.
-
         Args:
             values (list of values) : values to save for backward
         """
@@ -167,12 +161,10 @@ class History:
     """
     `History` stores the history of `Function` operations that was
     used to construct the current Variable.
-
     Attributes:
         last_fn (:class:`FunctionBase`) : The last Function that was called.
         ctx (:class:`Context`): The context for that Function.
         inputs (list of inputs) : The inputs that were given when `last_fn.forward` was called.
-
     """
 
     def __init__(self, last_fn=None, ctx=None, inputs=None):
@@ -183,10 +175,8 @@ class History:
     def backprop_step(self, d_output):
         """
         Run one step of backpropagation by calling chain rule.
-
         Args:
             d_output : a derivative with respect to this variable
-
         Returns:
             list of numbers : a derivative with respect to `inputs`
         """
@@ -197,9 +187,7 @@ class FunctionBase:
     """
     A function that can act on :class:`Variable` arguments to
     produce a :class:`Variable` output, while tracking the internal history.
-
     Call by :func:`FunctionBase.apply`.
-
     """
 
     @staticmethod
@@ -212,20 +200,15 @@ class FunctionBase:
         """
         Apply is called by the user to run the Function.
         Internally it does three things:
-
         a) Creates a Context for the function call.
         b) Calls forward to run the function.
         c) Attaches the Context to the History of the new variable.
-
         There is a bit of internal complexity in our implementation
         to handle both scalars and tensors.
-
         Args:
             vals (list of Variables or constants) : The arguments to forward
-
         Returns:
             `Variable` : The new variable produced
-
         """
         # Go through the variables to see if any needs grad.
         raw_vals = []
@@ -259,24 +242,20 @@ class FunctionBase:
     def chain_rule(cls, ctx, inputs, d_output):
         """
         Implement the derivative chain-rule.
-
         Args:
             ctx (:class:`Context`) : The context from running forward
             inputs (list of args) : The args that were passed to :func:`FunctionBase.apply` (e.g. :math:`x, y`)
             d_output (number) : The `d_output` value in the chain rule.
-
         Returns:
             list of (`Variable`, number) : A list of non-constant variables with their derivatives
             (see `is_constant` to remove unneeded variables)
-
         """
         # Tip: Note when implementing this function that
         # cls.backward may return either a value or a tuple.
-        back_results = wrap_tuple(cls.backward(ctx, d_output))
         return [
-            (var, deriv)
-            for var, deriv in zip(inputs, back_results)
-            if not is_constant(var)
+            (inputs[i], inputs[i].expand(back))
+            for (i, back) in enumerate(wrap_tuple(cls.backward(ctx, d_output)))
+            if not is_constant(inputs[i])
         ]
 
 
@@ -290,52 +269,57 @@ def is_constant(val):
 def topological_sort(variable):
     """
     Computes the topological order of the computation graph.
-
+    Uses the depth-first search algorithm described here: 
+    https://en.wikipedia.org/wiki/Topological_sorting#Algorithms
     Args:
         variable (:class:`Variable`): The right-most variable
-
     Returns:
         list of Variables : Non-constant Variables in topological order
                             starting from the right.
     """
-    visited = set()
-    stack = []
+    lo_vars = []
+    marks = {}  # 0 is temporary, 1 is permanent
 
-    def dfs(var):
-        if is_constant(var) or var.unique_id in visited:
+    def visit(var):
+        if is_constant(var):
             return
-        visited.add(var.unique_id)
-        if var.history.inputs:
-            for child in var.history.inputs:
-                dfs(child)
-        stack.append(var)
+        uid = var.unique_id
+        # if n has a permanent mark
+        if marks.get(uid, -1) == 1:
+            return
+        # if n has a temporary mark
+        if marks.get(uid, -1) == 0:
+            raise Exception("Not a DAG.")
+        marks[uid] = 0
+        if var.history and var.history.inputs:
+            for in_var in var.history.inputs:
+                visit(in_var)
+        marks[uid] = 1
+        lo_vars.append(var)
 
-    dfs(variable)
-    return stack
+    visit(variable)
+    return lo_vars
 
 
 def backpropagate(variable, deriv):
     """
     Runs backpropagation on the computation graph in order to
     compute derivatives for the leave nodes.
-
     See :doc:`backpropagate` for details on the algorithm.
-
     Args:
         variable (:class:`Variable`): The right-most variable
         deriv (number) : Its derivative that we want to propagate backward to the leaves.
-
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    var_stack = topological_sort(variable)
-    var_to_deriv = {}
-    for v in var_stack:
-        var_to_deriv[v.unique_id] = deriv if v.unique_id == variable.unique_id else 0
-    for var in reversed(var_stack):
-        cur_deriv = var_to_deriv[var.unique_id]
+    var_queue = topological_sort(variable)
+    var_dict = {variable.unique_id: deriv}
+    while var_queue:
+        var = var_queue.pop()
+        deriv = var_dict.get(var.unique_id)
         if var.is_leaf():
-            var.accumulate_derivative(cur_deriv)
+            var.accumulate_derivative(deriv)
         else:
-            back = var.history.backprop_step(cur_deriv)
-            for v, d in back:
-                var_to_deriv[v.unique_id] += d
+            derivs = var.history.backprop_step(deriv)
+            for (v, d) in derivs:
+                curr_val = var_dict.get(v.unique_id, 0)
+                var_dict[v.unique_id] = curr_val + d

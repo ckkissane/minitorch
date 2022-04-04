@@ -12,19 +12,14 @@ def tensor_map(fn):
     """
     Low-level implementation of tensor map between
     tensors with *possibly different strides*.
-
     Simple version:
-
     * Fill in the `out` array by applying `fn` to each
       value of `in_storage` assuming `out_shape` and `in_shape`
       are the same size.
-
     Broadcasted version:
-
     * Fill in the `out` array by applying `fn` to each
       value of `in_storage` assuming `out_shape` and `in_shape`
       broadcast. (`in_shape` must be smaller than `out_shape`).
-
     Args:
         fn: function from float-to-float to apply
         out (array): storage for out tensor
@@ -33,14 +28,24 @@ def tensor_map(fn):
         in_storage (array): storage for in tensor
         in_shape (array): shape for in tensor
         in_strides (array): strides for in tensor
-
     Returns:
         None : Fills in `out`
     """
 
     def _map(out, out_shape, out_strides, in_storage, in_shape, in_strides):
-        # TODO: Implement for Task 2.2.
-        raise NotImplementedError('Need to implement for Task 2.2')
+        out_idx = np.array(out_shape)
+        in_idx = np.array(in_shape)
+        # walk over output storage
+        for i in range(len(out)):
+            # get index of current out position
+            to_index(i, out_shape, out_idx)
+            # map to index in input tensor
+            broadcast_index(out_idx, out_shape, in_shape, in_idx)
+            # get input position in storage based on index
+            in_pos = index_to_position(in_idx, in_strides)
+            out_pos = index_to_position(out_idx, out_strides)
+            # apply fn on input storage value at position and write to output storage
+            out[out_pos] = fn(in_storage[in_pos])
 
     return _map
 
@@ -48,29 +53,22 @@ def tensor_map(fn):
 def map(fn):
     """
     Higher-order tensor map function ::
-
       fn_map = map(fn)
       fn_map(a, out)
       out
-
     Simple version::
-
         for i:
             for j:
                 out[i, j] = fn(a[i, j])
-
     Broadcasted version (`a` might be smaller than `out`) ::
-
         for i:
             for j:
                 out[i, j] = fn(a[i, 0])
-
     Args:
         fn: function from float-to-float to apply.
         a (:class:`TensorData`): tensor to map over
         out (:class:`TensorData`): optional, tensor data to fill in,
                should broadcast with `a`
-
     Returns:
         :class:`TensorData` : new tensor data
     """
@@ -90,19 +88,14 @@ def tensor_zip(fn):
     """
     Low-level implementation of tensor zip between
     tensors with *possibly different strides*.
-
     Simple version:
-
     * Fill in the `out` array by applying `fn` to each
       value of `a_storage` and `b_storage` assuming `out_shape`
       and `a_shape` are the same size.
-
     Broadcasted version:
-
     * Fill in the `out` array by applying `fn` to each
       value of `a_storage` and `b_storage` assuming `a_shape`
       and `b_shape` broadcast to `out_shape`.
-
     Args:
         fn: function mapping two floats to float to apply
         out (array): storage for `out` tensor
@@ -114,7 +107,6 @@ def tensor_zip(fn):
         b_storage (array): storage for `b` tensor
         b_shape (array): shape for `b` tensor
         b_strides (array): strides for `b` tensor
-
     Returns:
         None : Fills in `out`
     """
@@ -130,8 +122,22 @@ def tensor_zip(fn):
         b_shape,
         b_strides,
     ):
-        # TODO: Implement for Task 2.2.
-        raise NotImplementedError('Need to implement for Task 2.2')
+        out_idx = np.array(out_shape)
+        a_idx = np.array(a_shape)
+        b_idx = np.array(b_shape)
+        # walk over output storage
+        for i in range(len(out)):
+            # get index of current out position
+            to_index(i, out_shape, out_idx)
+            # map to index in input tensor
+            broadcast_index(out_idx, out_shape, a_shape, a_idx)
+            broadcast_index(out_idx, out_shape, b_shape, b_idx)
+            # get input position in storage based on index
+            a_pos = index_to_position(a_idx, a_strides)
+            b_pos = index_to_position(b_idx, b_strides)
+            out_pos = index_to_position(out_idx, out_strides)
+            # apply fn on input storage value at position and write to output storage
+            out[out_pos] = fn(a_storage[a_pos], b_storage[b_pos])
 
     return _zip
 
@@ -139,28 +145,20 @@ def tensor_zip(fn):
 def zip(fn):
     """
     Higher-order tensor zip function ::
-
       fn_zip = zip(fn)
       out = fn_zip(a, b)
-
     Simple version ::
-
         for i:
             for j:
                 out[i, j] = fn(a[i, j], b[i, j])
-
     Broadcasted version (`a` and `b` might be smaller than `out`) ::
-
         for i:
             for j:
                 out[i, j] = fn(a[i, 0], b[0, j])
-
-
     Args:
         fn: function from two floats-to-float to apply
         a (:class:`TensorData`): tensor to zip over
         b (:class:`TensorData`): tensor to zip over
-
     Returns:
         :class:`TensorData` : new tensor data
     """
@@ -182,10 +180,8 @@ def zip(fn):
 def tensor_reduce(fn):
     """
     Low-level implementation of tensor reduce.
-
     * `out_shape` will be the same as `a_shape`
        except with `reduce_dim` turned to size `1`
-
     Args:
         fn: reduction function mapping two floats to float
         out (array): storage for `out` tensor
@@ -195,14 +191,23 @@ def tensor_reduce(fn):
         a_shape (array): shape for `a` tensor
         a_strides (array): strides for `a` tensor
         reduce_dim (int): dimension to reduce out
-
     Returns:
         None : Fills in `out`
     """
 
     def _reduce(out, out_shape, out_strides, a_storage, a_shape, a_strides, reduce_dim):
-        # TODO: Implement for Task 2.2.
-        raise NotImplementedError('Need to implement for Task 2.2')
+        out_idx = np.array(out_shape)
+        # walk over output storage
+        for i in range(len(out)):
+            # get index of current out position
+            to_index(i, out_shape, out_idx)
+            out_pos = index_to_position(out_idx, out_strides)
+            for j in range(a_shape[reduce_dim]):
+                out_idx[reduce_dim] = j
+                # get input position in storage based on index
+                a_pos = index_to_position(out_idx, a_strides)
+                # apply fn on input storage value at position and write to output storage
+                out[out_pos] = fn(out[out_pos], a_storage[a_pos])
 
     return _reduce
 
@@ -210,26 +215,21 @@ def tensor_reduce(fn):
 def reduce(fn, start=0.0):
     """
     Higher-order tensor reduce function. ::
-
       fn_reduce = reduce(fn)
       out = fn_reduce(a, dim)
-
     Simple version ::
-
         for j:
             out[1, j] = start
             for i:
                 out[1, j] = fn(out[1, j], a[i, j])
-
-
     Args:
         fn: function from two floats-to-float to apply
         a (:class:`TensorData`): tensor to reduce over
         dim (int): int of dim to reduce
-
     Returns:
         :class:`TensorData` : new tensor
     """
+
     f = tensor_reduce(fn)
 
     def ret(a, dim):
