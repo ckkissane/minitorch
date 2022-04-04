@@ -21,10 +21,10 @@ def index_to_position(index, strides):
     Returns:
         int : position in storage
     """
-    assert len(index) == len(
-        strides
-    ), "Given index and strides need to be of equal length."
-    return sum([idx * stride for (idx, stride) in zip(index, strides)])
+    pos = 0
+    for idx, stride in zip(index, strides):
+        pos += idx * stride
+    return pos
 
 
 def to_index(ordinal, shape, out_index):
@@ -40,9 +40,10 @@ def to_index(ordinal, shape, out_index):
     Returns:
         None : Fills in `out_index`.
     """
-    for i, s in enumerate(reversed(shape)):
-        out_index[len(shape) - 1 - i] = ordinal % s
-        ordinal = ordinal // s
+    ordinal_ = ordinal + 0
+    for i, s in enumerate(shape[::-1]):
+        out_index[len(shape) - 1 - i] = ordinal_ % s
+        ordinal_ = ordinal_ // s
 
 
 def broadcast_index(big_index, big_shape, shape, out_index):

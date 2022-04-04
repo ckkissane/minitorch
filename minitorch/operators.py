@@ -32,17 +32,17 @@ def neg(x):
 
 def lt(x, y):
     ":math:`f(x) =` 1.0 if x is less than y else 0.0"
-    return float(x < y)
+    return 1.0 if x < y else 0.0
 
 
 def gt(x, y):
     ":math:`f(x) =` 1.0 if x is greater than y else 0.0"
-    return float(x > y)
+    return 1.0 if x > y else 0.0
 
 
 def eq(x, y):
     ":math:`f(x) =` 1.0 if x is equal to y else 0.0"
-    return float(x == y)
+    return 1.0 if x == y else 0.0
 
 
 def max(x, y):
@@ -79,7 +79,7 @@ def relu(x):
     Returns:
         float : relu value
     """
-    return max(x, 0.0)
+    return x if x > 0.0 else 0.0
 
 
 EPS = 1e-6
@@ -97,15 +97,15 @@ def exp(x):
 
 def log_back(x, d):
     r"If :math:`f = log` as above, compute d :math:`d \times f'(x)`"
-    return d * inv(x * math.log(math.e))
+    return d * (1.0 / (x * math.log(math.e)))
 
 
 def inv(x):
     ":math:`f(x) = 1/x`"
-    try:
-        return 1.0 / x
-    except ZeroDivisionError:
+    # Numba doesn't like Python Exception handling
+    if x == 0.0:
         return 0.0
+    return 1.0 / x
 
 
 def inv_back(x, d):
@@ -116,11 +116,6 @@ def inv_back(x, d):
 def relu_back(x, d):
     r"If :math:`f = relu` compute d :math:`d \times f'(x)`"
     return d * (x > 0.0)
-
-
-def sigmoid_back(x, d):
-    r"If :math:`f = sigmoid` compute d :math:`d \times f'(x)`"
-    return d * (sigmoid(x) * (1 - sigmoid(x)))
 
 
 # ## Task 0.3
