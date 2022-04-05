@@ -41,20 +41,19 @@ def tensor_map(fn):
         None : Fills in `out`
     """
 
-    @cuda.jit()
     def _map(out, out_shape, out_strides, out_size, in_storage, in_shape, in_strides):
-        i = cuda.blockDim.x * cuda.blockIdx.x + cuda.threadIdx.x
+        assert len(out) == out_size
+        i = cuda.blockDim.x*cuda.blockIdx.x+cuda.threadIdx.x
         if i >= out_size:
-            return 
-        out_idx = cuda.local.array(MAX_DIMS, numba.int32)
-        in_idx = cuda.local.array(MAX_DIMS, numbda.int32)
-        to_index(i, out_shape, out_idx)
-        broadcast_index(out_idx, out_shape, in_shape, in_idx)
-        out_pos = index_to_position(out_index, out_strides)
-        in_pos = index_to_position(in_idx, in_strides)
-        out[out_pos] = fn(in_storage[in_pos])
+            return
+        out_index = cuda.local.array(MAX_DIMS, numba.int32)
+        in_index = cuda.local.array(MAX_DIMS, numba.int32)
+        to_index(i, out_shape, out_index)
+        broadcast_index(out_index, out_shape, in_shape, in_index)
+        out[index_to_position(out_index, out_strides)] = fn(
+            in_storage[index_to_position(in_index, in_strides)])
 
-    return _map
+    return cuda.jit()(_map)
 
 
 def map(fn):
@@ -98,7 +97,6 @@ def tensor_zip(fn):
         None : Fills in `out`
     """
 
-    @cuda.jit()
     def _zip(
         out,
         out_shape,
@@ -111,20 +109,20 @@ def tensor_zip(fn):
         b_shape,
         b_strides,
     ):
-        i = cuda.blockDim.x * cuda.blockIdx.x + cuda.threadIdx.x
+        assert len(out) == out_size
+        i = cuda.blockDim.x*cuda.blockIdx.x+cuda.threadIdx.x
         if i >= out_size:
             return
-        out_idx = cuda.local.array(MAX_DIMS, numba.int32)
-        a_idx = cuda.local.array(MAX_DIMS, numba.int32)
-        b_idx = cuda.local.array(MAX_DIMS, numba.int32)
-        to_index(i, out_shape, out_idx)
-        broadcast_index(out_idx, out_shape, a_shape, a_idx)
-        broadcast_index(out_idx, out_shape, b_shape, b_idx)
-        a_pos = index_to_position(a_idx, a_strides)
-        b_pos = index_to_position(b_idx, b_strides)
-        out_pos = index_to_position(out_idx, out_strides)
-        out[out_pos] = fn(a_storage[a_pos], b_storage[b_pos])
-    return _zip
+        out_index = cuda.local.array(MAX_DIMS, numba.int32)
+        a_index = cuda.local.array(MAX_DIMS, numba.int32)
+        b_index = cuda.local.array(MAX_DIMS, numba.int32)
+        to_index(i, out_shape, out_index)
+        broadcast_index(out_index, out_shape, a_shape, a_index)
+        broadcast_index(out_index, out_shape, b_shape, b_index)
+        out[index_to_position(out_index, out_strides)] = fn(a_storage[index_to_position(
+            a_index, a_strides)], b_storage[index_to_position(b_index, b_strides)])
+
+    return cuda.jit()(_zip)
 
 
 def zip(fn):
@@ -218,6 +216,7 @@ def tensor_reduce(fn):
         reduce_value,
     ):
         BLOCK_DIM = 1024
+        assert len(out) == out_size
         i = cuda.blockDim.x*cuda.blockIdx.x+cuda.threadIdx.x
         if i >= out_size:
             return
