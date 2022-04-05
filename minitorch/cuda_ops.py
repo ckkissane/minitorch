@@ -44,6 +44,8 @@ def tensor_map(fn):
     @cuda.jit()
     def _map(out, out_shape, out_strides, out_size, in_storage, in_shape, in_strides):
         i = cuda.blockDim.x * cuda.blockIdx.x + cuda.threadIdx.x
+        if i >= out_size:
+            return 
         out_idx = cuda.local.array(MAX_DIMS, numba.int32)
         in_idx = cuda.local.array(MAX_DIMS, numbda.int32)
         to_index(i, out_shape, out_idx)
@@ -110,6 +112,8 @@ def tensor_zip(fn):
         b_strides,
     ):
         i = cuda.blockDim.x * cuda.blockIdx.x + cuda.threadIdx.x
+        if i >= out_size:
+            return
         out_idx = cuda.local.array(MAX_DIMS, numba.int32)
         a_idx = cuda.local.array(MAX_DIMS, numba.int32)
         b_idx = cuda.local.array(MAX_DIMS, numba.int32)
@@ -162,6 +166,8 @@ def _sum_practice(out, a, size):
     """
     BLOCK_DIM = 32
     i = cuda.blockDim.x * cuda.blockIdx.x + cuda.threadIdx.x
+    if i >= size:
+        return
     out_pos = i // 32
     out[out_idx] += a[i]
 
