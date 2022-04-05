@@ -278,8 +278,19 @@ def tensor_matrix_multiply(
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
-    # TODO: Implement for Task 3.2.
-    raise NotImplementedError("Need to implement for Task 3.2")
+    for i in prange(len(out)):
+        out_idx = np.copy(out_shape)
+        to_index(i, out_shape, out_idx)
+        for k in range(a_shape[-1]):
+            a_idx = np.copy(a_shape)
+            b_idx = np.copy(b_shape)
+            broadcast_index(out_idx, out_shape, a_shape, a_idx)
+            broadcast_index(out_idx, out_shape, b_shape, b_idx)
+            a_idx[-1] = k
+            b_idx[-2] = k
+            a_pos = index_to_position(a_idx, a_strides)
+            b_pos = index_to_position(b_idx, b_strides)
+            out[i] += a_storage[a_pos] * b_storage[b_pos]
 
 
 def matrix_multiply(a, b):
