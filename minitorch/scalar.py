@@ -212,13 +212,16 @@ class Sigmoid(ScalarFunction):
 
     @staticmethod
     def forward(ctx, a):
-        ctx.save_for_backward(a)
-        return operators.sigmoid(a)
+        t = operators.sigmoid(a)
+        ctx.save_for_backward(t)
+        return t
 
     @staticmethod
     def backward(ctx, d_output):
-        a = ctx.saved_values
-        return operators.sigmoid_back(a, d_output)
+        t = ctx.saved_values
+
+        sigmoid_back = operators.mul(d_output, operators.mul(t, 1.0 - t))
+        return sigmoid_back
 
 
 class ReLU(ScalarFunction):
