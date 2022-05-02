@@ -49,7 +49,6 @@ def make_tensor_backend(tensor_ops, is_cuda=False):
     lt_zip = tensor_ops.zip(operators.lt)
     eq_zip = tensor_ops.zip(operators.eq)
     is_close_zip = tensor_ops.zip(operators.is_close)
-    sigmoid_back_zip = tensor_ops.zip(operators.sigmoid_back)
     relu_back_zip = tensor_ops.zip(operators.relu_back)
     log_back_zip = tensor_ops.zip(operators.log_back)
     inv_back_zip = tensor_ops.zip(operators.inv_back)
@@ -106,13 +105,14 @@ def make_tensor_backend(tensor_ops, is_cuda=False):
         class Sigmoid(Function):
             @staticmethod
             def forward(ctx, a):
-                ctx.save_for_backward(a)
-                return sigmoid_map(a)
+                sig_a = sigmoid_map(a)
+                ctx.save_for_backward(sig_a)
+                return sig_a
 
             @staticmethod
             def backward(ctx, grad_output):
-                a = ctx.saved_values
-                return sigmoid_back_zip(a, grad_output)
+                sig_a = ctx.saved_values
+                return mul_zip(grad_output, mul_zip(sig_a, -sig_a + 1))
 
         class ReLU(Function):
             @staticmethod
