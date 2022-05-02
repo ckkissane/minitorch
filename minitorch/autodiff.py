@@ -269,7 +269,7 @@ def is_constant(val):
 def topological_sort(variable):
     """
     Computes the topological order of the computation graph.
-    Uses the depth-first search algorithm described here: 
+    Uses the depth-first search algorithm described here:
     https://en.wikipedia.org/wiki/Topological_sorting#Algorithms
     Args:
         variable (:class:`Variable`): The right-most variable

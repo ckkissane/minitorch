@@ -22,7 +22,11 @@ def tile(input, kernel):
 
     new_height = height // kH
     new_width = width // kW
-    output = input.contiguous().view(batch, channel, new_height, kH, new_width, kW).permute(0, 1, 2, 4, 3, 5)
+    output = (
+        input.contiguous()
+        .view(batch, channel, new_height, kH, new_width, kW)
+        .permute(0, 1, 2, 4, 3, 5)
+    )
     output = output.contiguous().view(batch, channel, new_height, new_width, kH * kW)
 
     return (output, new_height, new_width)
@@ -42,7 +46,7 @@ def avgpool2d(input, kernel):
     batch, channel, height, width = input.shape
     tiled, new_height, new_width = tile(input, kernel)
     pooled = tiled.mean(dim=4).view(batch, channel, new_height, new_width)
-    return pooled 
+    return pooled
 
 
 max_reduce = FastOps.reduce(operators.max, -1e9)
@@ -70,7 +74,7 @@ class Max(Function):
     def forward(ctx, input, dim):
         "Forward of max should be max reduction"
         out = max_reduce(input, dim)
-        out_argmax = (out == input)
+        out_argmax = out == input
         ctx.save_for_backward(out_argmax)
         return out
 
