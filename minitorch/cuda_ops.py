@@ -48,7 +48,7 @@ def tensor_map(fn):
         i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
         if i >= out_size:
             return
-        
+
         to_index(i, out_shape, out_idx)
         broadcast_index(out_idx, out_shape, in_shape, in_idx)
 
@@ -120,7 +120,7 @@ def tensor_zip(fn):
         i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
         if i >= out_size:
             return
-        
+
         to_index(i, out_shape, out_idx)
         out_pos = index_to_position(out_idx, out_strides)
 
@@ -131,7 +131,6 @@ def tensor_zip(fn):
         b_pos = index_to_position(b_idx, b_strides)
 
         out[out_pos] = fn(a_storage[a_pos], b_storage[b_pos])
-
 
     return cuda.jit()(_zip)
 
@@ -256,7 +255,7 @@ def tensor_reduce(fn):
             tmp = cuda.local.array(shape=1, dtype=numba.float32)
             for i in range(BLOCK_DIM):
                 tmp[0] += block_mem[i]
-            
+
             out_idx = a_idx
             out_idx[reduce_dim] = 0
             out_pos = index_to_position(out_idx, out_strides)
@@ -342,7 +341,7 @@ def _mm_practice(out, a, b, size):
     idx_y = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
     if idx_x >= size or idx_y >= size:
         return
-    
+
     pos = index_to_position((idx_x, idx_y), (size, 1))
     shm_a[idx_x][idx_y] = a[pos]
     shm_b[idx_x][idx_y] = b[pos]
@@ -352,7 +351,7 @@ def _mm_practice(out, a, b, size):
     total = 0.0
     for i in range(size):
         total += shm_a[idx_x][i] * shm_b[i][idx_y]
-    
+
     out[pos] = total
 
 
@@ -427,7 +426,7 @@ def tensor_matrix_multiply(
         # Block-(?, blockIdx.x, i) in a
         x_a = cuda.blockIdx.x * THREADS_PER_BLOCK + cuda.threadIdx.x
         y_a = i * THREADS_PER_BLOCK + cuda.threadIdx.y
-        z_a = (idx_z if out_shape[0] == a_shape[0] else 0)
+        z_a = idx_z if out_shape[0] == a_shape[0] else 0
         if x_a < a_shape[1] and y_a < a_shape[2]:
             pos_a = index_to_position((z_a, x_a, y_a), a_strides)
             shm_a[cuda.threadIdx.x][cuda.threadIdx.y] = a_storage[pos_a]
@@ -437,7 +436,7 @@ def tensor_matrix_multiply(
         # Block (?, i, blockIdx.y) in b
         x_b = i * THREADS_PER_BLOCK + cuda.threadIdx.x
         y_b = cuda.blockIdx.y * THREADS_PER_BLOCK + cuda.threadIdx.y
-        z_b = (idx_z if out_shape[0] == b_shape[0] else 0)
+        z_b = idx_z if out_shape[0] == b_shape[0] else 0
         if x_b < b_shape[1] and y_b < b_shape[2]:
             pos_b = index_to_position((z_b, x_b, y_b), b_strides)
             shm_b[cuda.threadIdx.x][cuda.threadIdx.y] = b_storage[pos_b]
@@ -447,7 +446,9 @@ def tensor_matrix_multiply(
         cuda.syncthreads()
 
         for j in range(THREADS_PER_BLOCK):
-            shm_c[cuda.threadIdx.x][cuda.threadIdx.y] += shm_a[cuda.threadIdx.x][j] * shm_b[j][cuda.threadIdx.y]
+            shm_c[cuda.threadIdx.x][cuda.threadIdx.y] += (
+                shm_a[cuda.threadIdx.x][j] * shm_b[j][cuda.threadIdx.y]
+            )
 
         cuda.syncthreads()
 

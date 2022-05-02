@@ -96,7 +96,7 @@ def tensor_conv1d(
                     input_index[2] = input_loc
                     input_pos = index_to_position(input_index, input_strides)
                     result += input[input_pos] * w
-                
+
         out_pos = index_to_position(out_index, out_strides)
         out[out_pos] = result
 
@@ -240,12 +240,17 @@ def tensor_conv2d(
 
                     input_h = oH + j_h if not reverse else (oH - j_h)
                     input_w = oW + j_w if not reverse else (oW - j_w)
-                    if input_h >= 0 and input_h < height and input_w >= 0 and input_w < width:
+                    if (
+                        input_h >= 0
+                        and input_h < height
+                        and input_w >= 0
+                        and input_w < width
+                    ):
                         input_index[2] = input_h
                         input_index[3] = input_w
                         input_pos = index_to_position(input_index, input_strides)
                         result += input[input_pos] * w
-            
+
         out_pos = index_to_position(out_index, out_strides)
         out[out_pos] = result
 

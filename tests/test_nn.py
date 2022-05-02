@@ -30,7 +30,7 @@ def test_avg(t):
 @given(tensors(shape=(2, 3, 4)))
 def test_max(t):
     out = minitorch.max(t, 1)
-    assert(out.shape == (2, 1, 4))
+    assert out.shape == (2, 1, 4)
 
     for i in range(t.shape[0]):
         for j in range(t.shape[2]):
